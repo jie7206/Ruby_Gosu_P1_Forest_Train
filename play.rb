@@ -106,7 +106,7 @@ class TrainGame < Gosu::Window
         @fire = Gosu::Image.new( "./Assets/Images/fire.png")
         @stop = Gosu::Image.new( "./Assets/Images/stop.png")
         @emo = Gosu::Image.new( "./Assets/Images/emo.png")
-        @bgsong = Gosu::Song.new("./Assets/Sounds/background.wav")
+        @bgsong = Gosu::Song.new("./Assets/Sounds/background.mp3")
         @go = Gosu::Sample.new("./Assets/Sounds/go.wav")
         @brake = Gosu::Sample.new("./Assets/Sounds/brake.wav")
         @crash = Gosu::Sample.new("./Assets/Sounds/explosion.wav")
