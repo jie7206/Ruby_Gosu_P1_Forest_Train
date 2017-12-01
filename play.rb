@@ -4,9 +4,9 @@ class TrainGame < Gosu::Window
 
     TRAIN_INI_SPEED = 2
     GAME_CAPTION = "麦可的森林小火车"
-    EOM_APPEAR_MAX_SEC = 10 # 恶魔出现在屏幕上的最长间隔秒数
-    EMO_MOVE_MAX_POINT = 5 # 恶魔每次移动的最大距离(像素)
-    EMO_SPEED_FIX = 0.8 # 恶魔速度修正值
+    EOM_APPEAR_MAX_SEC = 4 # 恶魔出现在屏幕上的最长间隔秒数
+    EMO_MAX_SPEED_SEED = 30 # 恶魔每次移动的最大距离(像素)
+    EMO_SPEED_FIX = 0.3 # 恶魔速度修正值
 
     def initialize( width, height, fullscreen )
         super width, height, fullscreen
@@ -24,7 +24,7 @@ class TrainGame < Gosu::Window
             train_speed_down if press_down
             train_go_right if press_right
             train_go_left if press_left
-            set_emo_position if delta_sec > @emo_appear_sec
+            reset_emo_scale_and_speed if delta_sec > @emo_appear_sec
             move_emo
         end
         start_game if @already_crash and press_start
@@ -43,7 +43,7 @@ class TrainGame < Gosu::Window
             @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
             @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
             @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
-            @speed_title.draw("时速：#{@hour_speed} 公里/小时 经过：#{Gosu::milliseconds/1000}秒", @screen_width/2 - 120, 40, 3, 1.0, 1.0, 0xff_000000)
+            @speed_title.draw("#{@emo_speed_seed.to_i} 时速：#{@hour_speed} 公里/小时 经过：#{Gosu::milliseconds/1000}秒", @screen_width/2 - 120, 40, 3, 1.0, 1.0, 0xff_000000)
         end
         if @already_crash
             @game_over.draw("GAME OVER", @screen_width/2 - 200, 180, 3, 1.0, 1.0, 0xff_990000)
@@ -63,21 +63,25 @@ class TrainGame < Gosu::Window
         set_timestamp
         set_train_params
         set_font_params
-        set_initinal_emo_position
+        set_initinal_emo_params
     end
 
-    def set_initinal_emo_position
-        @emo_x = @emo_y = 0
+    def set_initinal_emo_params
         @emo_width = 250
         @emo_height = 205
         @emo_scale_x = @emo_scale = 0.2
+        set_emo_rand_speed_seed
         set_emo_velocity
-        #set_emo_move_direction
         set_emo_appear_sec
     end
 
+    def rand_emo_xy_pos
+        @emo_x = rand(800)
+        @emo_y = rand(300)+30
+    end
+
     def set_emo_appear_sec
-        @emo_appear_sec = EOM_APPEAR_MAX_SEC #rand(EOM_APPEAR_MAX_SEC)+1
+        @emo_appear_sec = rand(EOM_APPEAR_MAX_SEC)+1
     end
 
     def set_timestamp
@@ -145,13 +149,12 @@ class TrainGame < Gosu::Window
 
     def train_speed_up
         @x_speed += @acc_increase
-        @go.play 0.5
+        @go.play 0.02
     end        
 
     def train_speed_down
         @x_speed -= @acc_increase
-        @brake.play 0.3
-        @bgsong.play
+        @brake.play 0.05
     end        
 
     def train_go_right
@@ -221,17 +224,24 @@ class TrainGame < Gosu::Window
     end
 
     def set_emo_position
-        @emo_x = rand(800)
-        @emo_y = rand(300)+30
-        @emo_scale_x = @emo_scale = (rand(18)+7)/100.0
+        rand_emo_xy_pos
+    end
+
+    def reset_emo_scale_and_speed
+        @emo_scale_x = @emo_scale = (rand(20)+3)/100.0
         @emo_scale_x *= -1 if @emo_x_speed < 0
+        set_emo_rand_speed_seed
         set_emo_appear_sec
         set_timestamp
     end
 
+    def set_emo_rand_speed_seed
+        @emo_speed_seed = rand(EMO_MAX_SPEED_SEED)+5
+    end
+
     def set_emo_velocity
-        @emo_x_speed = EMO_MOVE_MAX_POINT*EMO_SPEED_FIX
-        @emo_y_speed = EMO_MOVE_MAX_POINT*EMO_SPEED_FIX
+        @emo_x_speed = @emo_speed_seed*EMO_SPEED_FIX
+        @emo_y_speed = @emo_speed_seed*EMO_SPEED_FIX
     end
 
     def move_emo
@@ -245,7 +255,7 @@ class TrainGame < Gosu::Window
             @emo_x_speed *= -1
             @emo_scale_x *= -1
         end
-        if emo_lefttop_y < 0 or emo_lefttop_y > @screen_height*0.48
+        if emo_lefttop_y < 0 or emo_lefttop_y > @screen_height*0.55
             @emo_y_speed *= -1
         end
     end
