@@ -203,8 +203,10 @@ class TrainGame < Gosu::Window
     end
 
     def update_x_speed_value
-        if @x_speed < 1
-            @x_speed = 1
+        if @x_speed < 0
+            @x_speed = 0
+            @brake.play 0.8, 0.5
+            @bgsong.pause
         elsif @hour_speed > 10 and @bgsong.paused?
             @bgsong.play
         elsif @x_speed > 0
@@ -222,9 +224,9 @@ class TrainGame < Gosu::Window
     end        
 
     def check_x_direction
-            if @x >= @screen_width + @train.width * @scale *  @in_p
+            if @x >= @screen_width - @train.width * @scale # *  @in_p
                     train_go_left if @x_speed > 0
-            elsif @x_direction == -1 and @x < @train.width * @scale  *  @in_p * -1
+            elsif @x_direction == -1 and @x < @train.width * @scale #  *  @in_p * -1
                     train_go_right if @x_speed > 0
             end
     end
