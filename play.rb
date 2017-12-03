@@ -4,11 +4,11 @@ class TrainGame < Gosu::Window
 
     TRAIN_INI_SPEED = 2
     GAME_CAPTION = "麦可的森林小火车"
-    EOM_APPEAR_MAX_SEC = 3 # 恶魔变换大小的最长间隔秒数
-    EMO_MAX_SPEED_SEED = 30 # 恶魔每次移动的最大距离(像素)
+    EOM_APPEAR_MAX_SEC = 4 # 恶魔变换大小的最长间隔秒数
+    EMO_MAX_SPEED_SEED = 40 # 恶魔每次移动的最大距离(像素)
     EMO_SPEED_FIX = 0.1 # 恶魔速度修正值
     EMO_VISIBLE_PARAM = 40 # 控制恶魔出现的参数
-    GUN_HIT_DISTANCE = 50 # 枪打中目标的距离
+    EMO_PAUSE_FRAMES = 120 # 枪打中目标后暂停几个帧
 
     def initialize( width, height, fullscreen )
         super width, height, fullscreen
@@ -29,8 +29,14 @@ class TrainGame < Gosu::Window
             reset_emo_scale_and_speed if delta_sec > @emo_appear_sec
             move_emo
             set_emo_visible
+            emo_pause_or_play
         end
         start_game if @already_crash and press_start
+    end
+
+    def emo_pause_or_play
+        @emo_pause -= 1
+        set_emo_position if @emo_pause == 1 
     end
 
     def delta_sec
@@ -42,12 +48,13 @@ class TrainGame < Gosu::Window
         @gun.draw(mouse_x-@gun_width*@gun_scale/2, mouse_y-@gun_height*@gun_scale/2, 3, @gun_scale, @gun_scale)
         if not @already_crash
             @train.draw(@x,@y,1,@scale_x,@scale)
-            @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale) if @emo_visible > 0
+            @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(120, 255, 255, 255)) if @emo_visible > 0
             @fire.draw(@x+88,@y-39,2,0.15,0.2) if press_up and @x_direction == 1
             @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
             @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
             @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
-            @speed_title.draw("时速：#{@hour_speed} 公里/小时 经过：#{Gosu::milliseconds/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 支 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
+            @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 经过：#{(Gosu::milliseconds - @pass_time)/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
+            draw_fire_explore if @emo_pause > 5
         end
         if @already_crash
             @game_over.draw("GAME OVER", @screen_width/2 - 200, 180, 3, 1.0, 1.0, 0xff_990000)
@@ -67,12 +74,24 @@ class TrainGame < Gosu::Window
         @hit_emo = 0                
     end
 
+    def draw_fire_explore
+        if @emo_visible >= 0
+            if @emo_x_speed > 0
+                @stop.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale*0.7,@emo_scale*0.7)
+            else
+                @stop.draw(@emo_x-@emo_width*@emo_scale*1.5,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale*0.7,@emo_scale*0.7)
+            end
+        end
+    end
+
     def button_down( button )
         case button
             when Gosu::KbEscape,Gosu::GP_BUTTON_7
                 close
             when Gosu::MS_LEFT
                 check_if_hit_emo
+            when Gosu::KbSpace
+                start_game
         end
     end
 
@@ -86,7 +105,7 @@ class TrainGame < Gosu::Window
         if Gosu.distance(mouse_x, mouse_y, @emo_x, @emo_y) < @emo_width*@emo_scale and @emo_visible >= 0
             @hit_emo = 1
             @hit_emo_count += 1
-            set_emo_position
+            @emo_pause = EMO_PAUSE_FRAMES
         else
             @hit_emo = -1
         end
@@ -105,6 +124,7 @@ class TrainGame < Gosu::Window
         self.caption = GAME_CAPTION
         @screen_width = width
         @screen_height = width
+        @pass_time = Gosu::milliseconds
         set_timestamp
         set_train_params
         set_font_params
@@ -117,24 +137,23 @@ class TrainGame < Gosu::Window
         @emo_height = 205
         @emo_scale_x = @emo_scale = 0.2
         @emo_visible = 0
-        set_emo_rand_speed_seed
         set_emo_velocity
         set_emo_appear_sec
     end
 
     def set_initinal_gun_params
         @gun_width = 250
-        @gun_height = 261
+        @gun_height = 177 #261
         @gun_scale = 0.2
         @hit_emo = 0
         @gun_fire_count = 0
         @hit_emo_count = 0
-
+        @emo_pause = 0
     end
 
     def set_emo_visible
         @emo_visible -= 1
-        @emo_visible = EMO_VISIBLE_PARAM if @emo_visible < -10 and rand < 0.01
+        @emo_visible = EMO_VISIBLE_PARAM if @emo_visible < -10 and rand < 0.03
     end
 
     def rand_emo_xy_pos
@@ -172,7 +191,7 @@ class TrainGame < Gosu::Window
         @fire = Gosu::Image.new( "./Assets/Images/fire.png")
         @stop = Gosu::Image.new( "./Assets/Images/stop.png")
         @emo = Gosu::Image.new( "./Assets/Images/emo.png")
-        @gun = Gosu::Image.new( "./Assets/Images/aim.png")
+        @gun = Gosu::Image.new( "./Assets/Images/gun.png")
         @bgsong = Gosu::Song.new("./Assets/Sounds/background.mp3")
         @go = Gosu::Sample.new("./Assets/Sounds/go.wav")
         @brake = Gosu::Sample.new("./Assets/Sounds/brake.wav")
@@ -184,7 +203,14 @@ class TrainGame < Gosu::Window
         @already_crash = false
         @bgsong.play true
         @x_speed = @ini_x_speed
+        reset_pass_time
+        set_initinal_emo_params
+        set_initinal_gun_params
         set_emo_position
+    end
+
+    def reset_pass_time
+        @pass_time = Gosu::milliseconds
     end
 
     def press_up
@@ -289,38 +315,44 @@ class TrainGame < Gosu::Window
 
     def set_emo_position
         rand_emo_xy_pos
+        set_emo_appear_sec
     end
 
     def reset_emo_scale_and_speed
-        @emo_scale_x = @emo_scale = (rand(17)+7)/100.0
-        @emo_scale_x *= -1 if @emo_x_speed < 0
-        set_emo_rand_speed_seed
-        set_emo_appear_sec
-        set_timestamp
-    end
-
-    def set_emo_rand_speed_seed
-        @emo_speed_seed = rand(EMO_MAX_SPEED_SEED)+5
+        if @emo_pause <= 0
+            @emo_scale_x = @emo_scale = (rand(30)+10)/100.0
+            set_emo_velocity
+            set_emo_position
+            set_timestamp
+        end
     end
 
     def set_emo_velocity
+        @emo_speed_seed = rand(40)+10
         @emo_x_speed = @emo_speed_seed*EMO_SPEED_FIX
         @emo_y_speed = @emo_speed_seed*EMO_SPEED_FIX
     end
 
     def move_emo
-        @emo_x += @emo_x_speed
-        @emo_y += @emo_y_speed
-        check_emo_move_boundry
+        if @emo_pause <= 0
+            @emo_x += @emo_x_speed
+            @emo_y += @emo_y_speed
+            check_emo_move_boundry
+        end
     end
 
     def check_emo_move_boundry
         if emo_lefttop_x < emo_width_diff or emo_lefttop_x > @screen_width-emo_width_diff
             @emo_x_speed *= -1
             @emo_scale_x *= -1
+            @emo_x += 30 if @emo_x_speed > 0
+            @emo_x -= 30 if @emo_x_speed < 0
         end
         if emo_lefttop_y < 0 or emo_lefttop_y > @screen_height*0.55
             @emo_y_speed *= -1
+            @emo_y += 30 if @emo_y_speed > 0
+            @emo_y -= 30 if @emo_y_speed < 0
+
         end
     end
 
