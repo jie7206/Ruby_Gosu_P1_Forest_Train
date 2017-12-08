@@ -9,6 +9,8 @@ class TrainGame < Gosu::Window
     EMO_SPEED_FIX = 0.1 # 恶魔速度修正值
     EMO_VISIBLE_PARAM = 40 # 控制恶魔出现的参数
     EMO_PAUSE_FRAMES = 120 # 枪打中目标后暂停几个帧
+    CANNON_ANGLE_DEGREE = 5 # 火炮每按一次增减的角度
+    CANNON_MAX_ANGLE = 120 # 火炮展开的最大角度
 
     def initialize( width, height, fullscreen )
         super width, height, fullscreen
@@ -24,14 +26,26 @@ class TrainGame < Gosu::Window
             make_train_vibration
             train_speed_up if press_up
             train_speed_down if press_down
-            train_go_right if press_right
-            train_go_left if press_left
+            cannon_angle_right if press_right
+            cannon_angle_left if press_left
             reset_emo_scale_and_speed if delta_sec > @emo_appear_sec
             move_emo
             set_emo_visible
             emo_pause_or_play
+            set_cannon_pos
         end
         start_game if @already_crash and press_start
+    end
+
+    def set_cannon_pos
+        if @scale_x > 0
+            @cannon_x_fix = 27
+            @cannon_y_fix = 17
+        else
+            @cannon_x_fix = -27
+            @cannon_y_fix = 17
+        end
+
     end
 
     def emo_pause_or_play
@@ -47,7 +61,8 @@ class TrainGame < Gosu::Window
         @background.draw(0, 0, 0)
         @gun.draw(mouse_x-@gun_width*@gun_scale/2, mouse_y-@gun_height*@gun_scale/2, 3, @gun_scale, @gun_scale)
         if not @already_crash
-            @train.draw(@x,@y,1,@scale_x,@scale)
+            @train.draw(@x,@y,2,@scale_x,@scale)
+            @cannon.draw_rot(@x+@cannon_x_fix,@y+@cannon_y_fix,1,@cannon_angle,0.5,0.54,@scale_x,@scale)
             @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(120, 255, 255, 255)) if @emo_visible > 0
             @fire.draw(@x+88,@y-39,2,0.15,0.2) if press_up and @x_direction == 1
             @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
@@ -90,7 +105,8 @@ class TrainGame < Gosu::Window
                 close
             when Gosu::MS_LEFT
                 check_if_hit_emo
-            when Gosu::KbSpace
+            #when Gosu::KbSpace
+            when Gosu::KbR
                 start_game
         end
     end
@@ -102,7 +118,7 @@ class TrainGame < Gosu::Window
 
     def check_if_hit_emo
         fire_gun
-        if Gosu.distance(mouse_x, mouse_y, @emo_x, @emo_y) < @emo_width*@emo_scale and @emo_visible >= 0
+        if Gosu.distance(mouse_x, mouse_y, @emo_x, @emo_y) < @emo_width*@emo_scale and @emo_visible >= 0 and @emo_pause < 0
             @hit_emo = 1
             @hit_emo_count += 1
             @emo_pause = EMO_PAUSE_FRAMES
@@ -130,6 +146,7 @@ class TrainGame < Gosu::Window
         set_font_params
         set_initinal_emo_params
         set_initinal_gun_params
+        set_initinal_cannon_params
     end
 
     def set_initinal_emo_params
@@ -149,6 +166,10 @@ class TrainGame < Gosu::Window
         @gun_fire_count = 0
         @hit_emo_count = 0
         @emo_pause = 0
+    end
+
+    def set_initinal_cannon_params
+        @cannon_angle = 0
     end
 
     def set_emo_visible
@@ -192,6 +213,7 @@ class TrainGame < Gosu::Window
         @stop = Gosu::Image.new( "./Assets/Images/stop.png")
         @emo = Gosu::Image.new( "./Assets/Images/emo.png")
         @gun = Gosu::Image.new( "./Assets/Images/gun.png")
+        @cannon = Gosu::Image.new( "./Assets/Images/cannon.png")
         @bgsong = Gosu::Song.new("./Assets/Sounds/background.mp3")
         @go = Gosu::Sample.new("./Assets/Sounds/go.wav")
         @brake = Gosu::Sample.new("./Assets/Sounds/brake.wav")
@@ -250,11 +272,36 @@ class TrainGame < Gosu::Window
     def train_go_right
         @x_direction = 1
         @scale_x = @scale * 1
+        @cannon_angle *= -1
     end
 
     def train_go_left
         @x_direction = -1 
         @scale_x = @scale * -1
+        @cannon_angle *= -1
+    end
+
+    def cannon_angle_right         
+        if @scale_x > 0
+            @cannon_angle += CANNON_ANGLE_DEGREE
+            @cannon_angle = 0 if @cannon_angle > 0
+        end
+        if @scale_x < 0
+            @cannon_angle += CANNON_ANGLE_DEGREE
+            @cannon_angle = CANNON_MAX_ANGLE if @cannon_angle > CANNON_MAX_ANGLE
+        end               
+    end
+
+    
+    def cannon_angle_left
+        if @scale_x > 0
+            @cannon_angle -= CANNON_ANGLE_DEGREE
+            @cannon_angle = CANNON_MAX_ANGLE*-1 if @cannon_angle < CANNON_MAX_ANGLE*-1
+        end
+        if @scale_x < 0
+            @cannon_angle -= CANNON_ANGLE_DEGREE
+            @cannon_angle = 0 if @cannon_angle < 0
+        end
     end
 
     # Calculate vibration factor
