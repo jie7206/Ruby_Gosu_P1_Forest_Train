@@ -1,4 +1,5 @@
 require 'gosu'
+require 'pathname'
 require_relative 'bullet'
 
 class TrainGame < Gosu::Window
@@ -92,7 +93,7 @@ class TrainGame < Gosu::Window
             @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
             @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
             @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
-            @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 经过：#{(Gosu::milliseconds - @pass_time)/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
+            @speed_title.draw("#{@path} 时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 经过：#{(Gosu::milliseconds - @pass_time)/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
             draw_fire_explore if @emo_pause > 5
             draw_bullets
         end
@@ -130,7 +131,7 @@ class TrainGame < Gosu::Window
                 close
             when Gosu::MS_LEFT
                 check_if_hit_emo
-            when Gosu::KbSpace
+            when Gosu::KbSpace,Gosu::GP_BUTTON_3
                 @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
                 fire_gun
             when Gosu::KbR
@@ -185,6 +186,7 @@ class TrainGame < Gosu::Window
 
     def set_initinal_params( width, height )
         self.caption = GAME_CAPTION
+        @path = Pathname.new(File.dirname(__FILE__)).realpath
         @screen_width = width
         @screen_height = width
         @pass_time = Gosu::milliseconds
@@ -259,18 +261,18 @@ class TrainGame < Gosu::Window
     end                  
 
     def load_all_assets
-        @background = Gosu::Image.new( "./Assets/Images/background.jpg")
-        @train = Gosu::Image.new( "./Assets/Images/train.png")
-        @fire = Gosu::Image.new( "./Assets/Images/fire.png")
-        @stop = Gosu::Image.new( "./Assets/Images/stop.png")
-        @emo = Gosu::Image.new( "./Assets/Images/emo.png")
-        @gun = Gosu::Image.new( "./Assets/Images/gun.png")
-        @cannon = Gosu::Image.new( "./Assets/Images/cannon.png")
-        @bgsong = Gosu::Song.new("./Assets/Sounds/background.mp3")
-        @go = Gosu::Sample.new("./Assets/Sounds/go.wav")
-        @brake = Gosu::Sample.new("./Assets/Sounds/brake.wav")
-        @crash = Gosu::Sample.new("./Assets/Sounds/explosion.wav")
-        @gun_fire = Gosu::Sample.new("./Assets/Sounds/gun_fire.wav")
+        @background = Gosu::Image.new( "#{@path}/Assets/Images/background.jpg")
+        @train = Gosu::Image.new( "#{@path}/Assets/Images/train.png")
+        @fire = Gosu::Image.new( "#{@path}/Assets/Images/fire.png")
+        @stop = Gosu::Image.new( "#{@path}/Assets/Images/stop.png")
+        @emo = Gosu::Image.new( "#{@path}/Assets/Images/emo.png")
+        @gun = Gosu::Image.new( "#{@path}/Assets/Images/gun.png")
+        @cannon = Gosu::Image.new( "#{@path}/Assets/Images/cannon.png")
+        @bgsong = Gosu::Song.new("#{@path}/Assets/Sounds/background.mp3")
+        @go = Gosu::Sample.new("#{@path}/Assets/Sounds/go.wav")
+        @brake = Gosu::Sample.new("#{@path}/Assets/Sounds/brake.wav")
+        @crash = Gosu::Sample.new("#{@path}/Assets/Sounds/explosion.wav")
+        @gun_fire = Gosu::Sample.new("#{@path}/Assets/Sounds/gun_fire.wav")
     end
 
     def start_game
@@ -405,8 +407,9 @@ class TrainGame < Gosu::Window
     end        
 
     def check_x_direction
-            if @x >= @screen_width - @train.width * @scale # *  @in_p
-                    train_go_left if @x_speed > 0
+            if @x >= @screen_width # - @train.width * @scale # *  @in_p
+                    #train_go_left if @x_speed > 0
+                    @x = @train.width*@scale*-1
             elsif @x_direction == -1 and @x < @train.width * @scale #  *  @in_p * -1
                     train_go_right if @x_speed > 0
             end

@@ -7,7 +7,8 @@ class Bullet
     @x = x
     @y = y
     @direction = angle
-    @image = Gosu::Image.new('Assets/Images/bullet.png')
+    @path = Pathname.new(File.dirname(__FILE__)).realpath
+    @image = Gosu::Image.new("#{@path}/Assets/Images/bullet.png")
     @radius = 5
     @window = window
   end
