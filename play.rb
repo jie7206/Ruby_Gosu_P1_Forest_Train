@@ -1,4 +1,5 @@
 require 'gosu'
+require_relative 'bullet'
 
 class TrainGame < Gosu::Window
 
@@ -10,7 +11,7 @@ class TrainGame < Gosu::Window
     EMO_VISIBLE_PARAM = 40 # 控制恶魔出现的参数
     EMO_PAUSE_FRAMES = 120 # 枪打中目标后暂停几个帧
     CANNON_ANGLE_DEGREE = 5 # 火炮每按一次增减的角度
-    CANNON_MAX_ANGLE = 120 # 火炮展开的最大角度
+    CANNON_MAX_ANGLE = 60 # 火炮展开的最大角度
 
     def initialize( width, height, fullscreen )
         super width, height, fullscreen
@@ -33,8 +34,31 @@ class TrainGame < Gosu::Window
             set_emo_visible
             emo_pause_or_play
             set_cannon_pos
+            move_bullets
+            check_bullets_hit_emo
         end
         start_game if @already_crash and press_start
+    end
+
+    def check_bullets_hit_emo
+        @bullets.each do |bullet|
+            if Gosu.distance(@emo_x, @emo_y, bullet.x, bullet.y) < @emo_width*@emo_scale*0.5 + bullet.radius and @emo_visible >= 0 and @emo_pause < 0
+                exe_hit_emo
+                @bullets.delete bullet
+            end 
+        end
+    end
+
+    def move_bullets
+        @bullets.each do |bullet|
+            bullet.move
+        end
+    end
+
+    def draw_bullets
+        @bullets.each do |bullet|
+            bullet.draw
+        end
     end
 
     def set_cannon_pos
@@ -70,6 +94,7 @@ class TrainGame < Gosu::Window
             @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
             @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 经过：#{(Gosu::milliseconds - @pass_time)/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
             draw_fire_explore if @emo_pause > 5
+            draw_bullets
         end
         if @already_crash
             @game_over.draw("GAME OVER", @screen_width/2 - 200, 180, 3, 1.0, 1.0, 0xff_990000)
@@ -105,10 +130,24 @@ class TrainGame < Gosu::Window
                 close
             when Gosu::MS_LEFT
                 check_if_hit_emo
-            #when Gosu::KbSpace
+            when Gosu::KbSpace
+                @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
+                fire_gun
             when Gosu::KbR
                 start_game
         end
+    end
+
+    def get_bullet_x 
+        @x_direction > 0 ? @x+@cannon_x_fix-7 : @x+@cannon_x_fix+5
+    end
+
+    def get_bullet_y
+        @y+@cannon_y_fix-10
+    end
+
+    def get_bullet_angle
+        @x_direction > 0 ? @cannon_angle+90 : @cannon_angle-90
     end
 
     def fire_gun
@@ -119,12 +158,20 @@ class TrainGame < Gosu::Window
     def check_if_hit_emo
         fire_gun
         if Gosu.distance(mouse_x, mouse_y, @emo_x, @emo_y) < @emo_width*@emo_scale and @emo_visible >= 0 and @emo_pause < 0
-            @hit_emo = 1
-            @hit_emo_count += 1
-            @emo_pause = EMO_PAUSE_FRAMES
+            exe_hit_emo
         else
-            @hit_emo = -1
+            exe_nohit_emo
         end
+    end
+
+    def exe_hit_emo
+        @hit_emo = 1
+        @hit_emo_count += 1
+        @emo_pause = EMO_PAUSE_FRAMES
+    end
+
+    def exe_nohit_emo
+        @hit_emo = -1
     end
 
     def get_fire_rate 
@@ -144,12 +191,13 @@ class TrainGame < Gosu::Window
         set_timestamp
         set_train_params
         set_font_params
-        set_initinal_emo_params
-        set_initinal_gun_params
-        set_initinal_cannon_params
+        set_emo_params
+        set_gun_params
+        set_cannon_params
+        set_bullet_params
     end
 
-    def set_initinal_emo_params
+    def set_emo_params
         @emo_width = 250
         @emo_height = 205
         @emo_scale_x = @emo_scale = 0.2
@@ -158,7 +206,7 @@ class TrainGame < Gosu::Window
         set_emo_appear_sec
     end
 
-    def set_initinal_gun_params
+    def set_gun_params
         @gun_width = 250
         @gun_height = 177 #261
         @gun_scale = 0.2
@@ -168,8 +216,12 @@ class TrainGame < Gosu::Window
         @emo_pause = 0
     end
 
-    def set_initinal_cannon_params
+    def set_cannon_params
         @cannon_angle = 0
+    end
+
+    def set_bullet_params
+        @bullets = []
     end
 
     def set_emo_visible
@@ -226,8 +278,8 @@ class TrainGame < Gosu::Window
         @bgsong.play true
         @x_speed = @ini_x_speed
         reset_pass_time
-        set_initinal_emo_params
-        set_initinal_gun_params
+        set_emo_params
+        set_gun_params
         set_emo_position
     end
 
@@ -252,11 +304,11 @@ class TrainGame < Gosu::Window
     end
 
     def press_start
-        Gosu::button_down? Gosu::KbSpace or Gosu::button_down? Gosu::GP_BUTTON_9
+        Gosu::button_down? Gosu::KB_RETURN or Gosu::button_down? Gosu::GP_BUTTON_9
     end
 
     def make_train_vibration
-        @y = Math.sin(@x*@x_speed*factor(@x_speed)) + 435
+        @y =  435 #Math.sin(@x*@x_speed*factor(@x_speed)) + 435
     end
 
     def train_speed_up
