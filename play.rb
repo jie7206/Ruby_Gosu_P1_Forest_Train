@@ -13,6 +13,7 @@ class TrainGame < Gosu::Window
     EMO_PAUSE_FRAMES = 120 # 枪打中目标后暂停几个帧
     CANNON_ANGLE_DEGREE = 5 # 火炮每按一次增减的角度
     CANNON_MAX_ANGLE = 60 # 火炮展开的最大角度
+    BULLET_PERIOD = 100 # 每一发炮弹的间隔
 
     def initialize( width, height, fullscreen )
         super width, height, fullscreen
@@ -43,7 +44,7 @@ class TrainGame < Gosu::Window
 
     def check_bullets_hit_emo
         @bullets.each do |bullet|
-            if Gosu.distance(@emo_x, @emo_y, bullet.x, bullet.y) < @emo_width*@emo_scale*0.5 + bullet.radius and @emo_visible >= 0 and @emo_pause < 0
+            if Gosu.distance(@emo_x, @emo_y, bullet.x, bullet.y) < @emo_width*@emo_scale*0.5 + bullet.radius*2 and @emo_visible >= 0 and @emo_pause < 0
                 exe_hit_emo
                 @bullets.delete bullet
             end 
@@ -54,6 +55,7 @@ class TrainGame < Gosu::Window
         @bullets.each do |bullet|
             bullet.move
         end
+        @bullet_period -= 1
     end
 
     def draw_bullets
@@ -93,7 +95,7 @@ class TrainGame < Gosu::Window
             @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
             @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
             @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
-            @speed_title.draw("#{@path} 时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 经过：#{(Gosu::milliseconds - @pass_time)/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
+            @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 经过：#{(Gosu::milliseconds - @pass_time)/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
             draw_fire_explore if @emo_pause > 5
             draw_bullets
         end
@@ -132,8 +134,10 @@ class TrainGame < Gosu::Window
             when Gosu::MS_LEFT
                 check_if_hit_emo
             when Gosu::KbSpace,Gosu::GP_BUTTON_3
-                @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
-                fire_gun
+                if @bullet_period < 0
+                    @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
+                    shoot_bullet
+                end
             when Gosu::KbR
                 start_game
         end
@@ -152,8 +156,14 @@ class TrainGame < Gosu::Window
     end
 
     def fire_gun
-        @gun_fire.play 0.8
+        @gun_fire.play 0.5
         @gun_fire_count += 1
+    end
+
+    def shoot_bullet
+        @bullet_sound.play 1.0
+        @gun_fire_count += 1
+        @bullet_period = BULLET_PERIOD
     end
 
     def check_if_hit_emo
@@ -224,6 +234,7 @@ class TrainGame < Gosu::Window
 
     def set_bullet_params
         @bullets = []
+        @bullet_period = 0
     end
 
     def set_emo_visible
@@ -273,6 +284,7 @@ class TrainGame < Gosu::Window
         @brake = Gosu::Sample.new("#{@path}/Assets/Sounds/brake.wav")
         @crash = Gosu::Sample.new("#{@path}/Assets/Sounds/explosion.wav")
         @gun_fire = Gosu::Sample.new("#{@path}/Assets/Sounds/gun_fire.wav")
+        @bullet_sound = Gosu::Sample.new("#{@path}/Assets/Sounds/bullet.wav")
     end
 
     def start_game
