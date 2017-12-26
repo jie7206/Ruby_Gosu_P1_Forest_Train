@@ -1,4 +1,4 @@
-PATH_ROOT = Pathname.new(File.dirname(__FILE__)).realpath
+PATH_ROOT = '.' #Pathname.new(File.dirname(__FILE__)).realpath
 TRAIN_INI_SPEED = 2
 GAME_CAPTION = "麦可的森林小火车"
 EOM_APPEAR_MAX_SEC = 4 # 恶魔变换大小的最长间隔秒数
