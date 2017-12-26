@@ -1,6 +1,9 @@
 class Bullet
 
-  SPEED = 10
+  BULLET_SPEED = 20
+  BULLET_RADIUS = 10
+  PATH_ROOT = '.'
+  
   attr_reader :x, :y, :radius
 
   def initialize(window, x, y, angle)
@@ -8,14 +11,14 @@ class Bullet
     @y = y
     @direction = angle
     @path = Pathname.new(File.dirname(__FILE__)).realpath
-    @image = Gosu::Image.new("#{@path}/Assets/Images/bullet.png")
-    @radius = 5
+    @image = Gosu::Image.new("#{PATH_ROOT}/Assets/Images/bullet.png")
+    @radius = BULLET_RADIUS
     @window = window
   end
 
   def move
-      @x += Gosu.offset_x(@direction, SPEED)
-      @y += Gosu.offset_y(@direction, SPEED)
+      @x += Gosu.offset_x(@direction, BULLET_SPEED)
+      @y += Gosu.offset_y(@direction, BULLET_SPEED)
   end
 
   def draw

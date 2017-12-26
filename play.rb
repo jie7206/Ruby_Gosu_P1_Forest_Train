@@ -1,19 +1,10 @@
 require 'gosu'
 require 'pathname'
 require_relative 'bullet'
+require_relative 'explosion'
+require_relative 'params'
 
 class TrainGame < Gosu::Window
-
-    TRAIN_INI_SPEED = 2
-    GAME_CAPTION = "麦可的森林小火车"
-    EOM_APPEAR_MAX_SEC = 4 # 恶魔变换大小的最长间隔秒数
-    EMO_MAX_SPEED_SEED = 40 # 恶魔每次移动的最大距离(像素)
-    EMO_SPEED_FIX = 0.1 # 恶魔速度修正值
-    EMO_VISIBLE_PARAM = 40 # 控制恶魔出现的参数
-    EMO_PAUSE_FRAMES = 120 # 枪打中目标后暂停几个帧
-    CANNON_ANGLE_DEGREE = 5 # 火炮每按一次增减的角度
-    CANNON_MAX_ANGLE = 60 # 火炮展开的最大角度
-    BULLET_PERIOD = 100 # 每一发炮弹的间隔
 
     def initialize( width, height, fullscreen )
         super width, height, fullscreen
@@ -38,6 +29,7 @@ class TrainGame < Gosu::Window
             set_cannon_pos
             move_bullets
             check_bullets_hit_emo
+            clear_explosions
         end
         start_game if @already_crash and press_start
     end
@@ -47,7 +39,21 @@ class TrainGame < Gosu::Window
             if Gosu.distance(@emo_x, @emo_y, bullet.x, bullet.y) < @emo_width*@emo_scale*0.5 + bullet.radius*2 and @emo_visible >= 0 and @emo_pause < 0
                 exe_hit_emo
                 @bullets.delete bullet
+                add_explosion
             end 
+        end
+        clear_bullets
+    end
+
+    def clear_bullets
+        @bullets.dup.each do |bullet|
+            @bullets.delete bullet if !bullet.onscreen?
+        end
+    end
+
+    def clear_explosions
+        @explosions.dup.each do |explosion|
+            @explosions.delete explosion if explosion.finished
         end
     end
 
@@ -61,6 +67,12 @@ class TrainGame < Gosu::Window
     def draw_bullets
         @bullets.each do |bullet|
             bullet.draw
+        end
+    end
+
+    def draw_explosions
+        @explosions.each do |explosion|
+            explosion.draw
         end
     end
 
@@ -90,14 +102,15 @@ class TrainGame < Gosu::Window
         if not @already_crash
             @train.draw(@x,@y,2,@scale_x,@scale)
             @cannon.draw_rot(@x+@cannon_x_fix,@y+@cannon_y_fix,1,@cannon_angle,0.5,0.54,@scale_x,@scale)
-            @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(120, 255, 255, 255)) if @emo_visible > 0
+            @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(120, 255, 255, 255)) if @emo_visible > 0 and @emo_pause < 1
             @fire.draw(@x+88,@y-39,2,0.15,0.2) if press_up and @x_direction == 1
             @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
             @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
             @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
             @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 经过：#{(Gosu::milliseconds - @pass_time)/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
-            draw_fire_explore if @emo_pause > 5
+            # draw_fire_explore if @emo_pause > 5
             draw_bullets
+            draw_explosions
         end
         if @already_crash
             @game_over.draw("GAME OVER", @screen_width/2 - 200, 180, 3, 1.0, 1.0, 0xff_990000)
@@ -113,7 +126,7 @@ class TrainGame < Gosu::Window
         elsif @hit_emo == -1
             c = Gosu::Color::RED
         end
-        draw_quad(0,0,c,1366,0,c,1366,768,c,0,768,c)
+        # draw_quad(0,0,c,1366,0,c,1366,768,c,0,768,c)
         @hit_emo = 0                
     end
 
@@ -179,6 +192,16 @@ class TrainGame < Gosu::Window
         @hit_emo = 1
         @hit_emo_count += 1
         @emo_pause = EMO_PAUSE_FRAMES
+        add_explosion
+        destroy_emo
+    end
+
+    def add_explosion
+        @explosions.push Explosion.new(self, @emo_x, @emo_y, @emo_scale*5)
+    end
+
+    def destroy_emo
+
     end
 
     def exe_nohit_emo
@@ -196,7 +219,7 @@ class TrainGame < Gosu::Window
 
     def set_initinal_params( width, height )
         self.caption = GAME_CAPTION
-        @path = Pathname.new(File.dirname(__FILE__)).realpath
+        # @path = Pathname.new(File.dirname(__FILE__)).realpath
         @screen_width = width
         @screen_height = width
         @pass_time = Gosu::milliseconds
@@ -207,6 +230,7 @@ class TrainGame < Gosu::Window
         set_gun_params
         set_cannon_params
         set_bullet_params
+        set_explosion_params
     end
 
     def set_emo_params
@@ -235,6 +259,10 @@ class TrainGame < Gosu::Window
     def set_bullet_params
         @bullets = []
         @bullet_period = 0
+    end
+
+    def set_explosion_params
+        @explosions = []
     end
 
     def set_emo_visible
@@ -272,19 +300,19 @@ class TrainGame < Gosu::Window
     end                  
 
     def load_all_assets
-        @background = Gosu::Image.new( "#{@path}/Assets/Images/background.jpg")
-        @train = Gosu::Image.new( "#{@path}/Assets/Images/train.png")
-        @fire = Gosu::Image.new( "#{@path}/Assets/Images/fire.png")
-        @stop = Gosu::Image.new( "#{@path}/Assets/Images/stop.png")
-        @emo = Gosu::Image.new( "#{@path}/Assets/Images/emo.png")
-        @gun = Gosu::Image.new( "#{@path}/Assets/Images/gun.png")
-        @cannon = Gosu::Image.new( "#{@path}/Assets/Images/cannon.png")
-        @bgsong = Gosu::Song.new("#{@path}/Assets/Sounds/background.mp3")
-        @go = Gosu::Sample.new("#{@path}/Assets/Sounds/go.wav")
-        @brake = Gosu::Sample.new("#{@path}/Assets/Sounds/brake.wav")
-        @crash = Gosu::Sample.new("#{@path}/Assets/Sounds/explosion.wav")
-        @gun_fire = Gosu::Sample.new("#{@path}/Assets/Sounds/gun_fire.wav")
-        @bullet_sound = Gosu::Sample.new("#{@path}/Assets/Sounds/bullet.wav")
+        @background = Gosu::Image.new( "#{PATH_ROOT}/Assets/Images/background.jpg")
+        @train = Gosu::Image.new( "#{PATH_ROOT}/Assets/Images/train.png")
+        @fire = Gosu::Image.new( "#{PATH_ROOT}/Assets/Images/fire.png")
+        @stop = Gosu::Image.new( "#{PATH_ROOT}/Assets/Images/stop.png")
+        @emo = Gosu::Image.new( "#{PATH_ROOT}/Assets/Images/emo.png")
+        @gun = Gosu::Image.new( "#{PATH_ROOT}/Assets/Images/gun.png")
+        @cannon = Gosu::Image.new( "#{PATH_ROOT}/Assets/Images/cannon.png")
+        @bgsong = Gosu::Song.new("#{PATH_ROOT}/Assets/Sounds/background.mp3")
+        @go = Gosu::Sample.new("#{PATH_ROOT}/Assets/Sounds/go.wav")
+        @brake = Gosu::Sample.new("#{PATH_ROOT}/Assets/Sounds/brake.wav")
+        @crash = Gosu::Sample.new("#{PATH_ROOT}/Assets/Sounds/crash.wav")
+        @gun_fire = Gosu::Sample.new("#{PATH_ROOT}/Assets/Sounds/gun_fire.wav")
+        @bullet_sound = Gosu::Sample.new("#{PATH_ROOT}/Assets/Sounds/bullet.wav")
     end
 
     def start_game
