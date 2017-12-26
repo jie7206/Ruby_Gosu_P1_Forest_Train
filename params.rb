@@ -1,4 +1,4 @@
-PATH_ROOT = '.' #Pathname.new(File.dirname(__FILE__)).realpath
+PATH_ROOT = '.' #Pathname.new(File.dirname(__FILE__)).realpath # 为了与Ubuntu相容
 TRAIN_INI_SPEED = 2
 GAME_CAPTION = "麦可的森林小火车"
 EOM_APPEAR_MAX_SEC = 4 # 恶魔变换大小的最长间隔秒数
@@ -9,5 +9,5 @@ EMO_PAUSE_FRAMES = 50 # 中目标后暂停几个帧
 CANNON_ANGLE_DEGREE = 5 # 火炮每按一次增减的角度
 CANNON_MAX_ANGLE = 60 # 火炮展开的最大角度
 BULLET_PERIOD = 50 # 每一发炮弹的间隔
-BULLET_SPEED = 2
-BULLET_RADIUS = 10
+BULLET_SPEED = 2 # 炮弹的速度
+BULLET_RADIUS = 10 # 炮弹感应区大小
