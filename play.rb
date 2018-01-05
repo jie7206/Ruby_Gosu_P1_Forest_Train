@@ -10,28 +10,38 @@ class TrainGame < Gosu::Window
         super width, height, fullscreen
         set_initinal_params width, height
         load_all_assets
-        start_game
     end
 
     def update
-        if not @already_crash
-            check_x_speed
-            check_x_direction
-            make_train_vibration
-            train_speed_up if press_up
-            train_speed_down if press_down
-            cannon_angle_right if press_right
-            cannon_angle_left if press_left
-            reset_emo_scale_and_speed if delta_sec > @emo_appear_sec
-            move_emo
-            set_emo_visible
-            emo_pause_or_play
-            set_cannon_pos
-            move_bullets
-            check_bullets_hit_emo
-            clear_explosions
+        case @scene
+        when :game
+            update_game
+        when :end
+            update_end
         end
-        start_game if @already_crash and press_start
+    end
+
+    def update_game
+        check_x_speed
+        check_x_direction
+        make_train_vibration
+        train_speed_up if press_up
+        train_speed_down if press_down
+        cannon_angle_right if press_right
+        cannon_angle_left if press_left
+        reset_emo_scale_and_speed if delta_sec > @emo_appear_sec
+        move_emo
+        set_emo_visible
+        emo_pause_or_play
+        set_cannon_pos
+        move_bullets
+        check_bullets_hit_emo
+        clear_explosions
+        if_over_time_then_game_over
+    end
+
+    def update_end
+
     end
 
     def check_bullets_hit_emo
@@ -97,37 +107,43 @@ class TrainGame < Gosu::Window
     end
 
     def draw
-        @background.draw(0, 0, 0)
-        @gun.draw(mouse_x-@gun_width*@gun_scale/2, mouse_y-@gun_height*@gun_scale/2, 3, @gun_scale, @gun_scale)
-        if not @already_crash
-            @train.draw(@x,@y,2,@scale_x,@scale)
-            @cannon.draw_rot(@x+@cannon_x_fix,@y+@cannon_y_fix,1,@cannon_angle,0.5,0.54,@scale_x,@scale)
-            @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(120, 255, 255, 255)) if @emo_visible > 0 and @emo_pause < 1
-            @fire.draw(@x+88,@y-39,2,0.15,0.2) if press_up and @x_direction == 1
-            @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
-            @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
-            @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
-            @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 经过：#{(Gosu::milliseconds - @pass_time)/1000}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
-            # draw_fire_explore if @emo_pause > 5
-            draw_bullets
-            draw_explosions
+        case @scene
+        when :start
+            draw_start
+        when :game
+            draw_game
+        when :end
+            draw_end
         end
-        if @already_crash
-            @game_over.draw("GAME OVER", @screen_width/2 - 200, 180, 3, 1.0, 1.0, 0xff_990000)
-        end
-        show_hit_result    
     end
 
-    def show_hit_result
-        if @hit_emo == 0
-            c = Gosu::Color::NONE
-        elsif @hit_emo == 1
-            c = Gosu::Color::GREEN
-        elsif @hit_emo == -1
-            c = Gosu::Color::RED
-        end
-        # draw_quad(0,0,c,1366,0,c,1366,768,c,0,768,c)
-        @hit_emo = 0                
+    def draw_start
+        @background.draw(0, 0, 0)
+        @speed_title.draw("游戏说明", @screen_width/2-70, 50, 3, 1.8, 1.8, 0xff_000000)
+        @speed_title.draw("按任意键开始，空白键发射，上下键加减速，左右键调角度", 80, 130, 3, 1.4, 1.4, 0xff_000000)
+        @speed_title.draw("一旦火车时速到达200公里以上或超过#{GAME_OVER_SECONDS}秒，游戏将自动结束", 80, 210, 3, 1.4, 1.4, 0xff_000000)
+    end
+
+    def draw_game
+        @background.draw(0, 0, 0)
+        @gun.draw(mouse_x-@gun_width*@gun_scale/2, mouse_y-@gun_height*@gun_scale/2, 3, @gun_scale, @gun_scale)
+        @train.draw(@x,@y,2,@scale_x,@scale)
+        @cannon.draw_rot(@x+@cannon_x_fix,@y+@cannon_y_fix,1,@cannon_angle,0.5,0.54,@scale_x,@scale)
+        @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(120, 255, 255, 255)) if @emo_visible > 0 and @emo_pause < 1
+        @fire.draw(@x+88,@y-39,2,0.15,0.2) if press_up and @x_direction == 1
+        @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
+        @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
+        @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
+        @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 剩下：#{GAME_OVER_SECONDS-((Gosu::milliseconds - @pass_time)/1000)}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
+        draw_bullets
+        draw_explosions
+    end
+
+    def draw_end
+        @background.draw(0, 0, 0)
+        @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
+        @game_over.draw("GAME OVER", @screen_width/2 - 200, 180, 3, 1.0, 1.0, 0xff_990000)
+        @game_over.draw("按ESC离开，按回车键重新开始", @screen_width/2 - 190, 260, 3, 0.4, 0.4, 0xff_990000)
     end
 
     def draw_fire_explore
@@ -140,19 +156,43 @@ class TrainGame < Gosu::Window
         end
     end
 
-    def button_down( button )
-        case button
-            when Gosu::KbEscape,Gosu::GP_BUTTON_7
-                close
-            when Gosu::MS_LEFT
-                check_if_hit_emo
-            when Gosu::KbSpace,Gosu::GP_BUTTON_3
-                if @bullet_period < 0
-                    @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
-                    shoot_bullet
-                end
-            when Gosu::KbR
-                start_game
+    def button_down( keyid )
+        case @scene
+        when :start
+            button_down_start( keyid )
+        when :game
+            button_down_game( keyid )
+        when :end
+            button_down_end( keyid )
+        end
+    end
+
+    def button_down_start( keyid )
+        initialize_game
+    end
+
+    def button_down_game( keyid )
+        case keyid
+        when Gosu::KbEscape,Gosu::GP_BUTTON_7
+            close
+        when Gosu::MS_LEFT
+            check_if_hit_emo
+        when Gosu::KbSpace,Gosu::GP_BUTTON_3
+            if @bullet_period < 0
+                @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
+                shoot_bullet
+            end
+        when Gosu::KbR
+            restart_game
+        end
+    end
+
+    def button_down_end( keyid )
+        case keyid
+        when Gosu::KbEscape,Gosu::GP_BUTTON_7
+            close
+        when Gosu::KB_RETURN
+            start_game
         end
     end
 
@@ -219,18 +259,22 @@ class TrainGame < Gosu::Window
 
     def set_initinal_params( width, height )
         self.caption = GAME_CAPTION
-        # @path = Pathname.new(File.dirname(__FILE__)).realpath
         @screen_width = width
         @screen_height = width
         @pass_time = Gosu::milliseconds
+        @scene = :start
+        set_font_params
         set_timestamp
         set_train_params
-        set_font_params
         set_emo_params
         set_gun_params
         set_cannon_params
         set_bullet_params
         set_explosion_params
+    end
+
+    def initialize_game
+        start_game
     end
 
     def set_emo_params
@@ -316,9 +360,13 @@ class TrainGame < Gosu::Window
     end
 
     def start_game
-        @already_crash = false
         @bgsong.play true
         @x_speed = @ini_x_speed
+        restart_game
+    end
+
+    def restart_game
+        @scene = :game
         reset_pass_time
         set_emo_params
         set_gun_params
@@ -437,14 +485,24 @@ class TrainGame < Gosu::Window
         end            
     end
 
+    def if_over_time_then_game_over
+        if (Gosu::milliseconds - @pass_time)/1000 >= GAME_OVER_SECONDS
+            exe_game_over
+        end
+    end
+
     def if_over_max_speed_then_crash
         if @hour_speed > @hour_speed_max
-            @x_speed = 0
-            @bgsong.stop
-            @crash.play 2
-            @already_crash = true
+            exe_game_over
         end
-    end        
+    end
+
+    def exe_game_over
+        @x_speed = 0
+        @bgsong.stop
+        @crash.play 2
+        @scene = :end
+    end
 
     def check_x_direction
             if @x >= @screen_width # - @train.width * @scale # *  @in_p
