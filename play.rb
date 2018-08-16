@@ -121,7 +121,7 @@ class TrainGame < Gosu::Window
         @background.draw(0, 0, 0)
         @speed_title.draw("游戏说明", @screen_width/2-70, 50, 3, 1.8, 1.8, 0xff_000000)
         @speed_title.draw("按任意键开始，空白键发射，上下键加减速，左右键调角度", 80, 130, 3, 1.4, 1.4, 0xff_000000)
-        @speed_title.draw("一旦火车时速到达200公里以上或超过#{GAME_OVER_SECONDS}秒，游戏将自动结束", 80, 210, 3, 1.4, 1.4, 0xff_000000)
+        @speed_title.draw("一旦火车时速到达#{@hour_speed_max}公里以上或超过#{GAME_OVER_SECONDS}秒，游戏将自动结束", 80, 210, 3, 1.4, 1.4, 0xff_000000)
     end
 
     def draw_game
@@ -333,7 +333,7 @@ class TrainGame < Gosu::Window
         @x_friction = 0.001 # 火车的摩擦力
         @acc_increase = 0.02 # 火车每次踩油门或刹车速度的变化值
         @scale  = @scale_x = 0.25 # 火车的图像大小
-        @hour_speed_max =200 # 火车超过此时速则爆炸
+        @hour_speed_max = MAX_TRAIN_SPEED # 火车超过此时速则爆炸
         @x = 1 # 火车的初始位置
         @in_p = 1 # 火车全部进去的比率
     end
