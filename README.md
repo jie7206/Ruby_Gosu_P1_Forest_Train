@@ -1,3 +1,3 @@
-I create this with two reasons.
-One is to understand ruby & gosu power.
-The other is just for fun. YA!
+我的森林小火车游戏
+使用Ruby/Gosu开发
+2023.9.16 发布 1.0.0.0
