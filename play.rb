@@ -129,9 +129,13 @@ class TrainGame < Gosu::Window
 
     def draw_game
         @background.draw(0, 0, 0)
-        @gun.draw(mouse_x-@gun_width*@gun_scale/2, mouse_y-@gun_height*@gun_scale/2, 3, @gun_scale, @gun_scale)
-        @train.draw(@x,@y,2,@scale_x,@scale)
-        @cannon.draw_rot(@x+@cannon_x_fix,@y+@cannon_y_fix,1,@cannon_angle,0.5,0.54,@scale_x,@scale)
+        if @game_mode == "gun"
+          @gun.draw(mouse_x-@gun_width*@gun_scale/2, mouse_y-@gun_height*@gun_scale/2, 3, @gun_scale, @gun_scale)
+        end
+        if @game_mode == "cannon"
+          @train.draw(@x,@y,2,@scale_x,@scale)
+          @cannon.draw_rot(@x+@cannon_x_fix,@y+@cannon_y_fix,1,@cannon_angle,0.5,0.54,@scale_x,@scale)
+        end
         @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(EMO_ALPHA, 255, 255, 255)) if @emo_visible > 0 and @emo_pause < 1
         @fire.draw(@x+88,@y-39,2,0.15,0.2) if press_up and @x_direction == 1
         @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
@@ -190,7 +194,10 @@ class TrainGame < Gosu::Window
       # GpButton15 = 无对应 
 
       case keyid
-      when Gosu::KB_RETURN,MsLeft,GpButton6
+      when Gosu::KB_RETURN,GpButton6
+          initialize_game
+      when MsLeft
+          @game_mode = "gun"
           initialize_game
       when KbEscape,GpButton4
           close
@@ -202,9 +209,9 @@ class TrainGame < Gosu::Window
         when KbEscape,GpButton4
             close
         when MsLeft
-            check_if_hit_emo
+            check_if_hit_emo if @game_mode == "gun"
         when KbSpace,GpButton2
-            shoot_bullet
+            shoot_bullet if @game_mode == "cannon"
         when KbR
             restart_game
         end
@@ -293,14 +300,19 @@ class TrainGame < Gosu::Window
         set_timestamp
         set_train_params
         set_emo_params
-        set_gun_params
         set_cannon_params
         set_bullet_params
         set_explosion_params
+        set_gun_params
+        set_game_mode
     end
 
     def initialize_game
         start_game
+    end
+
+    def set_game_mode
+      @game_mode = "cannon"
     end
 
     def set_emo_params
@@ -395,8 +407,8 @@ class TrainGame < Gosu::Window
         @scene = :game
         reset_pass_time
         set_emo_params
-        set_gun_params
         set_emo_position
+        set_gun_params
     end
 
     def reset_pass_time
