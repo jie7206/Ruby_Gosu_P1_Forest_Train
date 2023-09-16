@@ -119,9 +119,15 @@ class TrainGame < Gosu::Window
 
     def draw_start
         @background.draw(0, 0, 0)
+<<<<<<< HEAD
         @speed_title.draw("游戏说明", @screen_width/2-80, 50, 3, 1.8, 1.8, 0xff_000000)
         @speed_title.draw("按回车或鼠标左键开始，空白键或鼠标左键发射，上下键加减速，左右键调角度", 70, 130, 3, 0.92, 0.92, 0xff_000000)
         @speed_title.draw("一旦火车时速到达#{@hour_speed_max}公里以上或超过#{GAME_OVER_SECONDS}秒，游戏将自动结束", 75, 190, 3, 1.2, 1.2, 0xff_000000)
+=======
+        @speed_title.draw("游戏说明", @screen_width/2-70, 50, 3, 1.8, 1.8, 0xff_000000)
+        @speed_title.draw("按任意键开始，空白键发射，上下键加减速，左右键调角度", 80, 130, 3, 1.4, 1.4, 0xff_000000)
+        @speed_title.draw("一旦火车时速到达#{@hour_speed_max}公里以上或超过#{GAME_OVER_SECONDS}秒，游戏将自动结束", 80, 210, 3, 1.4, 1.4, 0xff_000000)
+>>>>>>> 3818fdf3e33e1e7cdd077b7411809472baa01ee6
     end
 
     def draw_game
