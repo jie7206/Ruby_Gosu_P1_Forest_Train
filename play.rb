@@ -50,7 +50,7 @@ class TrainGame < Gosu::Window
                 exe_hit_emo
                 @bullets.delete bullet
                 add_explosion
-            end 
+            end
         end
         clear_bullets
     end
@@ -99,7 +99,7 @@ class TrainGame < Gosu::Window
 
     def emo_pause_or_play
         @emo_pause -= 1
-        set_emo_position if @emo_pause == 1 
+        set_emo_position if @emo_pause == 1
     end
 
     def delta_sec
@@ -119,9 +119,9 @@ class TrainGame < Gosu::Window
 
     def draw_start
         @background.draw(0, 0, 0)
-        @speed_title.draw("游戏说明", @screen_width/2-70, 50, 3, 1.8, 1.8, 0xff_000000)
-        @speed_title.draw("按任意键开始，空白键发射，上下键加减速，左右键调角度", 80, 130, 3, 1.4, 1.4, 0xff_000000)
-        @speed_title.draw("一旦火车时速到达200公里以上或超过#{GAME_OVER_SECONDS}秒，游戏将自动结束", 80, 210, 3, 1.4, 1.4, 0xff_000000)
+        @speed_title.draw("游戏说明", @screen_width/2-80, 50, 3, 1.8, 1.8, 0xff_000000)
+        @speed_title.draw("按回车或鼠标左键开始，空白键或鼠标左键发射，上下键加减速，左右键调角度", 70, 130, 3, 0.92, 0.92, 0xff_000000)
+        @speed_title.draw("一旦火车时速到达#{@hour_speed_max}公里以上或超过#{GAME_OVER_SECONDS}秒，游戏将自动结束", 75, 190, 3, 1.2, 1.2, 0xff_000000)
     end
 
     def draw_game
@@ -129,12 +129,12 @@ class TrainGame < Gosu::Window
         @gun.draw(mouse_x-@gun_width*@gun_scale/2, mouse_y-@gun_height*@gun_scale/2, 3, @gun_scale, @gun_scale)
         @train.draw(@x,@y,2,@scale_x,@scale)
         @cannon.draw_rot(@x+@cannon_x_fix,@y+@cannon_y_fix,1,@cannon_angle,0.5,0.54,@scale_x,@scale)
-        @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(120, 255, 255, 255)) if @emo_visible > 0 and @emo_pause < 1
+        @emo.draw(@emo_x-@emo_width*@emo_scale/2,@emo_y-@emo_height*@emo_scale/2,2,@emo_scale_x,@emo_scale,Gosu::Color.argb(EMO_ALPHA, 255, 255, 255)) if @emo_visible > 0 and @emo_pause < 1
         @fire.draw(@x+88,@y-39,2,0.15,0.2) if press_up and @x_direction == 1
         @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
         @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
         @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
-        @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 剩下：#{GAME_OVER_SECONDS-((Gosu::milliseconds - @pass_time)/1000)}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
+        @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 剩下：#{GAME_OVER_SECONDS-((Gosu::milliseconds - @pass_time)/1000)}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 330, 40, 3, 1.0, 1.0, 0xff_000000)
         draw_bullets
         draw_explosions
     end
@@ -142,8 +142,8 @@ class TrainGame < Gosu::Window
     def draw_end
         @background.draw(0, 0, 0)
         @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
-        @game_over.draw("GAME OVER", @screen_width/2 - 200, 180, 3, 1.0, 1.0, 0xff_990000)
-        @game_over.draw("按ESC离开，按回车键重新开始", @screen_width/2 - 190, 260, 3, 0.4, 0.4, 0xff_990000)
+        @game_over.draw("游戏结束", @screen_width/2 - 130, 150, 3, 1.2, 1.2, 0xff_990000)
+        @game_over.draw("按ESC离开，按回车重新开始", @screen_width/2 - 200, 260, 3, 0.6, 0.6, 0xff_990000)
     end
 
     def draw_fire_explore
@@ -168,7 +168,12 @@ class TrainGame < Gosu::Window
     end
 
     def button_down_start( keyid )
-        initialize_game
+      case keyid
+      when Gosu::KB_RETURN,Gosu::MS_LEFT
+          initialize_game
+      when Gosu::KbEscape,Gosu::GP_BUTTON_7
+          close
+      end
     end
 
     def button_down_game( keyid )
@@ -191,12 +196,12 @@ class TrainGame < Gosu::Window
         case keyid
         when Gosu::KbEscape,Gosu::GP_BUTTON_7
             close
-        when Gosu::KB_RETURN
+        when Gosu::KB_RETURN,Gosu::GP_BUTTON_3
             start_game
         end
     end
 
-    def get_bullet_x 
+    def get_bullet_x
         @x_direction > 0 ? @x+@cannon_x_fix-7 : @x+@cannon_x_fix+5
     end
 
@@ -248,7 +253,7 @@ class TrainGame < Gosu::Window
         @hit_emo = -1
     end
 
-    def get_fire_rate 
+    def get_fire_rate
         if @gun_fire_count > 0
             gun_fire_count = @gun_fire_count # fix editor color bug
             ((@hit_emo_count/gun_fire_count.to_f)*100).to_i
@@ -333,15 +338,15 @@ class TrainGame < Gosu::Window
         @x_friction = 0.001 # 火车的摩擦力
         @acc_increase = 0.02 # 火车每次踩油门或刹车速度的变化值
         @scale  = @scale_x = 0.25 # 火车的图像大小
-        @hour_speed_max =200 # 火车超过此时速则爆炸
+        @hour_speed_max = MAX_TRAIN_SPEED # 火车超过此时速则爆炸
         @x = 1 # 火车的初始位置
         @in_p = 1 # 火车全部进去的比率
     end
-
+  
     def set_font_params
-        @speed_title = Gosu::Font.new(20)
-        @game_over = Gosu::Font.new(80)
-    end                  
+        @speed_title = Gosu::Font.new((20*FONT_SCALE).to_i, name: FONT_TTF)
+        @game_over = Gosu::Font.new((50*FONT_SCALE).to_i, name: FONT_TTF)
+    end
 
     def load_all_assets
         @background = Gosu::Image.new( "#{PATH_ROOT}/Assets/Images/background.jpg")
@@ -404,12 +409,12 @@ class TrainGame < Gosu::Window
     def train_speed_up
         @x_speed += @acc_increase
         @go.play 0.02
-    end        
+    end
 
     def train_speed_down
         @x_speed -= @acc_increase
         @brake.play 0.05
-    end        
+    end
 
     def train_go_right
         @x_direction = 1
@@ -418,12 +423,12 @@ class TrainGame < Gosu::Window
     end
 
     def train_go_left
-        @x_direction = -1 
+        @x_direction = -1
         @scale_x = @scale * -1
         @cannon_angle *= -1
     end
 
-    def cannon_angle_right         
+    def cannon_angle_right
         if @scale_x > 0
             @cannon_angle += CANNON_ANGLE_DEGREE
             @cannon_angle = 0 if @cannon_angle > 0
@@ -431,10 +436,10 @@ class TrainGame < Gosu::Window
         if @scale_x < 0
             @cannon_angle += CANNON_ANGLE_DEGREE
             @cannon_angle = CANNON_MAX_ANGLE if @cannon_angle > CANNON_MAX_ANGLE
-        end               
+        end
     end
 
-    
+
     def cannon_angle_left
         if @scale_x > 0
             @cannon_angle -= CANNON_ANGLE_DEGREE
@@ -482,7 +487,7 @@ class TrainGame < Gosu::Window
             @bgsong.play
         elsif @x_speed > 0
             @x_speed -= @x_friction
-        end            
+        end
     end
 
     def if_over_time_then_game_over
