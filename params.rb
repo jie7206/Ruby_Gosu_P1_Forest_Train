@@ -1,6 +1,6 @@
 PATH_ROOT = '.' #Pathname.new(File.dirname(__FILE__)).realpath # 为了与Ubuntu相容
 TRAIN_INI_SPEED = 2
-GAME_CAPTION = "麦可的森林小火车"
+GAME_CAPTION = "阿杰森林小火车"
 MAX_TRAIN_SPEED = 300 # 火车超过此时速则爆炸
 EOM_APPEAR_MAX_SEC = 4 # 飞机变换大小的最长间隔秒数
 EMO_MAX_SPEED_SEED = 40 # 飞机每次移动的最大距离(像素)

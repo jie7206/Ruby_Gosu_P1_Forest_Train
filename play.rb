@@ -6,6 +6,8 @@ require_relative 'params'
 
 class TrainGame < Gosu::Window
 
+    include Gosu::Button 
+
     def initialize( width, height, fullscreen )
         super width, height, fullscreen
         set_initinal_params width, height
@@ -29,6 +31,7 @@ class TrainGame < Gosu::Window
         train_speed_down if press_down
         cannon_angle_right if press_right
         cannon_angle_left if press_left
+        shoot_bullet(true) if press_fire
         reset_emo_scale_and_speed if delta_sec > @emo_appear_sec
         move_emo
         set_emo_visible
@@ -119,7 +122,7 @@ class TrainGame < Gosu::Window
 
     def draw_start
         @background.draw(0, 0, 0)
-        @speed_title.draw("游戏说明", @screen_width/2-80, 50, 3, 1.8, 1.8, 0xff_000000)
+        @speed_title.draw("#{GAME_CAPTION}游戏说明", @screen_width/2-@screen_width/4+55, 50, 3, 1.3, 1.3, 0xff_000000)
         @speed_title.draw("按回车或鼠标左键开始，空白键或鼠标左键发射，上下键加减速，左右键调角度", 70, 130, 3, 0.92, 0.92, 0xff_000000)
         @speed_title.draw("一旦火车时速到达#{@hour_speed_max}公里以上或超过#{GAME_OVER_SECONDS}秒，游戏将自动结束", 75, 190, 3, 1.2, 1.2, 0xff_000000)
     end
@@ -168,35 +171,50 @@ class TrainGame < Gosu::Window
     end
 
     def button_down_start( keyid )
+      # 手柄对应
+      # GpButton0 = A 按钮：通常用于确认或执行操作
+      # GpButton1 = B 按钮：通常用于取消或返回
+      # GpButton2 = X 按钮：在游戏中具有多种用途
+      # GpButton3 = Y 按钮：在游戏中具有多种用途
+      # GpButton4 = Back 或 View 按钮：用于显示额外信息或选项
+      # GpButton5 = 无对应
+      # GpButton6 = Start 或 Menu 按钮：用于暂停游戏或打开菜单
+      # GpButton7 = 左摇杆按下（LS）：用于控制角色移动
+      # GpButton8 = 右摇杆按下（RS）：用于控制角色移动 
+      # GpButton9 = LB 
+      # GpButton10 = RB
+      # GpButton11 = LT 
+      # GpButton12 = RT 
+      # GpButton13 = 无对应
+      # GpButton14 = 无对应
+      # GpButton15 = 无对应 
+
       case keyid
-      when Gosu::KB_RETURN,Gosu::MS_LEFT
+      when Gosu::KB_RETURN,MsLeft,GpButton6
           initialize_game
-      when Gosu::KbEscape,Gosu::GP_BUTTON_7
+      when KbEscape,GpButton4
           close
       end
     end
 
     def button_down_game( keyid )
         case keyid
-        when Gosu::KbEscape,Gosu::GP_BUTTON_7
+        when KbEscape,GpButton4
             close
-        when Gosu::MS_LEFT
+        when MsLeft
             check_if_hit_emo
-        when Gosu::KbSpace,Gosu::GP_BUTTON_3
-            if @bullet_period < 0
-                @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
-                shoot_bullet
-            end
-        when Gosu::KbR
+        when KbSpace,GpButton2
+            shoot_bullet
+        when KbR
             restart_game
         end
     end
 
     def button_down_end( keyid )
         case keyid
-        when Gosu::KbEscape,Gosu::GP_BUTTON_7
+        when KbEscape,GpButton4
             close
-        when Gosu::KB_RETURN,Gosu::GP_BUTTON_3
+        when Gosu::KB_RETURN,GpButton6
             start_game
         end
     end
@@ -218,10 +236,13 @@ class TrainGame < Gosu::Window
         @gun_fire_count += 1
     end
 
-    def shoot_bullet
+    def shoot_bullet( mechanism = false )
+      if @bullet_period < 0 or ( mechanism and @bullet_period < BULLET_PERIOD/2)
+        @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
         @bullet_sound.play 1.0
         @gun_fire_count += 1
         @bullet_period = BULLET_PERIOD
+      end      
     end
 
     def check_if_hit_emo
@@ -382,24 +403,24 @@ class TrainGame < Gosu::Window
         @pass_time = Gosu::milliseconds
     end
 
+    def press_fire
+        Gosu::button_down? KbF or Gosu::button_down? GpButton1
+    end
+
     def press_up
-        Gosu::button_down? Gosu::KbUp or Gosu::button_down? Gosu::GP_UP or Gosu::button_down? Gosu::GP_BUTTON_0
+        Gosu::button_down? KbUp or Gosu::button_down? GpButton3 or Gosu::button_down? GpButton11
     end
 
     def press_down
-        Gosu::button_down? Gosu::KbDown or Gosu::button_down? Gosu::GP_DOWN or Gosu::button_down? Gosu::GP_BUTTON_2
+        Gosu::button_down? KbDown or Gosu::button_down? GpButton0 or Gosu::button_down? GpButton12
     end
 
     def press_left
-        Gosu::button_down? Gosu::KbLeft or Gosu::button_down? Gosu::GP_LEFT
+        Gosu::button_down? KbLeft or Gosu::button_down? GpLeft or Gosu::button_down? GpUp
     end
 
     def press_right
-        Gosu::button_down? Gosu::KbRight or Gosu::button_down? Gosu::GP_RIGHT
-    end
-
-    def press_start
-        Gosu::button_down? Gosu::KB_RETURN or Gosu::button_down? Gosu::GP_BUTTON_9
+        Gosu::button_down? KbRight or Gosu::button_down? GpRight or Gosu::button_down? GpDown
     end
 
     def make_train_vibration
