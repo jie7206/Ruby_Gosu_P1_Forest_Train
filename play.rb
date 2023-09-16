@@ -24,21 +24,25 @@ class TrainGame < Gosu::Window
     end
 
     def update_game
-        check_x_speed
-        check_x_direction
-        make_train_vibration
-        train_speed_up if press_up
-        train_speed_down if press_down
-        cannon_angle_right if press_right
-        cannon_angle_left if press_left
-        shoot_bullet(true) if press_fire
+        if @game_mode == "cannon"
+          check_x_speed
+          check_x_direction
+          make_train_vibration
+          train_speed_up if press_up
+          train_speed_down if press_down
+          cannon_angle_right if press_right
+          cannon_angle_left if press_left
+          fire_cannon(true) if press_fire
+          set_cannon_pos
+          check_bullets_hit_emo
+        elsif @game_mode == "gun"
+          shoot_gun(true) if press_shoot
+        end
         reset_emo_scale_and_speed if delta_sec > @emo_appear_sec
         move_emo
         set_emo_visible
         emo_pause_or_play
-        set_cannon_pos
         move_bullets
-        check_bullets_hit_emo
         clear_explosions
         if_over_time_then_game_over
     end
@@ -141,14 +145,15 @@ class TrainGame < Gosu::Window
         @fire.draw(@x-105,@y-39,2,0.15,0.2) if press_up and @x_direction == -1
         @stop.draw(@x+40,@y+20,2,0.17,0.12) if press_down and @x_direction == 1
         @stop.draw(@x-90,@y+20,2,0.17,0.12) if press_down and @x_direction == -1
-        @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时 剩下：#{GAME_OVER_SECONDS-((Gosu::milliseconds - @pass_time)/1000)}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 330, 40, 3, 1.0, 1.0, 0xff_000000)
+        @speed_title.draw(@speed_descr, @screen_width/2 - 330, 40, 3, 1.0, 1.0, 0xff_000000)
+        @speed_title.draw("剩下：#{GAME_OVER_SECONDS-((Gosu::milliseconds - @pass_time)/1000).to_i}秒，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 140, 40, 3, 1.0, 1.0, 0xff_000000)
         draw_bullets
         draw_explosions
     end
 
     def draw_end
         @background.draw(0, 0, 0)
-        @speed_title.draw("时速：#{sprintf("%0.02f",@hour_speed)} 公里/小时，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
+        @speed_title.draw("#{@speed_descr}，发出：#{@gun_fire_count} 发 打中：#{@hit_emo_count} 发 命中率：#{get_fire_rate} %", @screen_width/2 - 300, 40, 3, 1.0, 1.0, 0xff_000000)
         @game_over.draw("游戏结束", @screen_width/2 - 130, 150, 3, 1.2, 1.2, 0xff_990000)
         @game_over.draw("按ESC离开，按回车重新开始", @screen_width/2 - 200, 260, 3, 0.6, 0.6, 0xff_990000)
     end
@@ -209,9 +214,9 @@ class TrainGame < Gosu::Window
         when KbEscape,GpButton4
             close
         when MsLeft
-            check_if_hit_emo if @game_mode == "gun"
+            shoot_gun if @game_mode == "gun"
         when KbSpace,GpButton2
-            shoot_bullet if @game_mode == "cannon"
+            fire_cannon
         when KbR
             restart_game
         end
@@ -238,13 +243,12 @@ class TrainGame < Gosu::Window
         @x_direction > 0 ? @cannon_angle+90 : @cannon_angle-90
     end
 
-    def fire_gun
-        @gun_fire.play 0.5
-        @gun_fire_count += 1
+    def mechanism_period( mechanism = false, division = 2 )
+      @bullet_period < 0 or ( mechanism and @bullet_period < BULLET_PERIOD/division)
     end
 
-    def shoot_bullet( mechanism = false )
-      if @bullet_period < 0 or ( mechanism and @bullet_period < BULLET_PERIOD/2)
+    def fire_cannon( mechanism = false )
+      if @game_mode == "cannon" and mechanism_period(mechanism)
         @bullets.push Bullet.new(self, get_bullet_x, get_bullet_y, get_bullet_angle)
         @bullet_sound.play 1.0
         @gun_fire_count += 1
@@ -252,12 +256,16 @@ class TrainGame < Gosu::Window
       end      
     end
 
-    def check_if_hit_emo
-        fire_gun
-        if Gosu.distance(mouse_x, mouse_y, @emo_x, @emo_y) < @emo_width*@emo_scale and @emo_visible >= 0 and @emo_pause < 0
-            exe_hit_emo
-        else
-            exe_nohit_emo
+    def shoot_gun( mechanism = false )
+        if @game_mode == "gun" and mechanism_period(mechanism)
+          @gun_fire.play 0.5
+          @gun_fire_count += 1
+          @bullet_period = BULLET_PERIOD
+          if Gosu.distance(mouse_x, mouse_y, @emo_x, @emo_y) < @emo_width*@emo_scale and @emo_visible >= 0 and @emo_pause < 0
+              exe_hit_emo
+          else
+              exe_nohit_emo
+          end
         end
     end
 
@@ -419,6 +427,10 @@ class TrainGame < Gosu::Window
         Gosu::button_down? KbF or Gosu::button_down? GpButton1
     end
 
+    def press_shoot
+        Gosu::button_down? MsRight
+    end
+
     def press_up
         Gosu::button_down? KbUp or Gosu::button_down? GpButton3 or Gosu::button_down? GpButton11
     end
@@ -509,6 +521,7 @@ class TrainGame < Gosu::Window
     def x_speed_to_hour_speed
         @x += @x_speed * @x_direction
         @hour_speed = (@x_speed*20).to_i
+        @speed_descr = "时速(公里/小时)：#{@hour_speed.to_i}"
     end
 
     def update_x_speed_value
